@@ -49,9 +49,12 @@ UART_HandleTypeDef huart2;
 uint32_t InputCaptureBuffer[IC_BUFFER_SIZE];
 float averageRisingedgePeriod;
 float MotorReadRPM;
+float MotorSetRPM = 17.00;
 float MotorReadRPMBeforeGeared;
 
-uint32_t MotorSetDuty = 500;
+int MotorControlEnable = 0;
+
+uint32_t MotorSetDuty = 50;
 
 /* USER CODE END PV */
 
@@ -122,10 +125,35 @@ int main(void)
 	if(HAL_GetTick()>=timestamp){
 	  timestamp = HAL_GetTick()+500;
 	  averageRisingedgePeriod = IC_Calc_Period();
+
 	  MotorReadRPM = (60*1000000)/(12*averageRisingedgePeriod*64);
 	  MotorReadRPMBeforeGeared = (60 * 1000000)/(12*averageRisingedgePeriod);
 
-	  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,MotorSetDuty);
+	  if(MotorControlEnable == 0){
+		  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,MotorSetDuty*10);
+
+	  }else if (MotorControlEnable == 1){
+		  if(MotorSetRPM > MotorReadRPM){
+			  MotorSetDuty = (MotorSetDuty+1);
+		  }else if (MotorSetRPM < MotorReadRPM){
+			  MotorSetDuty = (MotorSetDuty-1);
+		  }
+
+		  if(MotorSetDuty >= 100){
+			  MotorSetDuty = 100;
+		  }else if (MotorSetDuty <= 0){
+			  MotorSetDuty = 0;
+		  }
+
+
+		  if(MotorSetDuty >= 0 && MotorSetDuty <= 100){
+			  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,MotorSetDuty*10);
+		  }else if(MotorSetDuty >= 100){
+			  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,10*10);
+		  }else{
+			  __HAL_TIM_SET_COMPARE(&htim1,TIM_CHANNEL_1,0);
+		  }
+	  }
 	}
   }
   /* USER CODE END 3 */
